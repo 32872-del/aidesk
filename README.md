@@ -51,6 +51,7 @@ A personal workspace for multi-AI development. It does not write code for you; i
 python aeci.py status
 python aeci.py task new "Write next task" --objective "Capture the next bounded task."
 python aeci.py context task-002
+python aeci.py guard task-003
 ```
 
 测试命令：

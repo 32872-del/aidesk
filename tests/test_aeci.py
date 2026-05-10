@@ -93,6 +93,78 @@ class AeciCliTests(unittest.TestCase):
             self.assertIn("Phase: manual-workflow", lines)
             self.assertIn("Tasks: 1", lines)
 
+    def test_guard_passes_allowed_files(self):
+        temp, root = self.make_workspace()
+        with temp:
+            aeci.create_task(
+                root=root,
+                title="Guard task",
+                objective="Check allowed files.",
+                background=None,
+                task_type="implementation",
+                risk="medium",
+                allowed_files=["src/**", "tests/**"],
+                forbidden_files=[".git/**"],
+                acceptance_criteria=["Guard passes."],
+                recommended_agent="backend-worker",
+                recommended_checks=[],
+            )
+
+            result = aeci.guard_task(root, "task-001", changed_files=["src/app.py", "tests/test_app.py"])
+
+            self.assertTrue(result.passed)
+            self.assertEqual(result.forbidden_violations, [])
+            self.assertEqual(result.out_of_scope_files, [])
+            events = [json.loads(line) for line in (root / ".aeci" / "events.jsonl").read_text().splitlines()]
+            self.assertEqual(events[-1]["type"], "guard_ran")
+            self.assertTrue(events[-1]["passed"])
+
+    def test_guard_flags_forbidden_files(self):
+        temp, root = self.make_workspace()
+        with temp:
+            aeci.create_task(
+                root=root,
+                title="Guard task",
+                objective="Check forbidden files.",
+                background=None,
+                task_type="implementation",
+                risk="medium",
+                allowed_files=["src/**", "Agent工作区_个人开发者蓝图.md"],
+                forbidden_files=["Agent工作区_个人开发者蓝图.md"],
+                acceptance_criteria=["Guard fails."],
+                recommended_agent="backend-worker",
+                recommended_checks=[],
+            )
+
+            result = aeci.guard_task(root, "task-001", changed_files=["Agent工作区_个人开发者蓝图.md"])
+
+            self.assertFalse(result.passed)
+            self.assertEqual(result.forbidden_violations, ["Agent工作区_个人开发者蓝图.md"])
+            self.assertEqual(result.out_of_scope_files, [])
+
+    def test_guard_flags_out_of_scope_files(self):
+        temp, root = self.make_workspace()
+        with temp:
+            aeci.create_task(
+                root=root,
+                title="Guard task",
+                objective="Check scope.",
+                background=None,
+                task_type="implementation",
+                risk="medium",
+                allowed_files=["src/**"],
+                forbidden_files=[".git/**"],
+                acceptance_criteria=["Guard fails."],
+                recommended_agent="backend-worker",
+                recommended_checks=[],
+            )
+
+            result = aeci.guard_task(root, "task-001", changed_files=["README.md", "src/app.py"])
+
+            self.assertFalse(result.passed)
+            self.assertEqual(result.forbidden_violations, [])
+            self.assertEqual(result.out_of_scope_files, ["README.md"])
+
 
 if __name__ == "__main__":
     unittest.main()

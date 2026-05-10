@@ -21,6 +21,8 @@ medium
 - `aeci.py`
 - `tests/**`
 - `.aeci/tasks/task-003.md`
+- `.aeci/reviews/task-003.md`
+- `.aeci/episodes/task-003.md`
 - `.aeci/events.jsonl`
 - `README.md`
 

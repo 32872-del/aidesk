@@ -2,3 +2,5 @@
 {"ts":"2026-05-10T23:22:57+08:00","type":"context_generated","actor":"aeci-cli","task_id":"task-002","agent":"codex","path":".aeci/contexts/task-002.codex.md"}
 {"ts":"2026-05-10T23:22:57+08:00","type":"context_generated","actor":"aeci-cli","task_id":"task-004","agent":"codex","path":".aeci/contexts/task-004.codex.md"}
 {"ts":"2026-05-10T23:22:57+08:00","type":"context_generated","actor":"aeci-cli","task_id":"task-003","agent":"codex","path":".aeci/contexts/task-003.codex.md"}
+{"ts":"2026-05-10T23:37:12+08:00","type":"guard_ran","actor":"aeci-cli","task_id":"task-003","passed":true,"changed_files":["aeci.py","tests/test_aeci.py"],"forbidden_violations":[],"out_of_scope_files":[]}
+{"ts":"2026-05-10T23:38:40+08:00","type":"guard_ran","actor":"aeci-cli","task_id":"task-003","passed":true,"changed_files":[".aeci/episodes/task-003.md",".aeci/events.jsonl",".aeci/reviews/task-003.md",".aeci/tasks/task-003.md","README.md","aeci.py","tests/test_aeci.py"],"forbidden_violations":[],"out_of_scope_files":[]}

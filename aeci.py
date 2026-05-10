@@ -8,8 +8,10 @@ human-readable files. It is a workflow helper, not the future protocol layer.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -105,6 +107,20 @@ class TaskRecord:
     task_id: str
     title: str
     path: Path
+
+
+@dataclass(frozen=True)
+class GuardResult:
+    task_id: str
+    changed_files: List[str]
+    allowed_patterns: List[str]
+    forbidden_patterns: List[str]
+    forbidden_violations: List[str]
+    out_of_scope_files: List[str]
+
+    @property
+    def passed(self) -> bool:
+        return not self.forbidden_violations and not self.out_of_scope_files
 
 
 class WorkspaceError(RuntimeError):
@@ -223,6 +239,41 @@ def extract_section(content: str, heading: str, default: str = "TBD") -> str:
     return body or default
 
 
+def section_bullets(content: str, heading: str) -> List[str]:
+    section = extract_section(content, heading, "")
+    items: List[str] = []
+    for raw_line in section.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("- "):
+            continue
+        item = line[2:].strip()
+        if item.startswith("`") and item.endswith("`") and len(item) >= 2:
+            item = item[1:-1]
+        item = item.strip()
+        if item and item.upper() != "TBD":
+            items.append(normalize_path_text(item))
+    return items
+
+
+def normalize_path_text(value: str) -> str:
+    return value.replace("\\", "/").strip("/")
+
+
+def matches_pattern(path: str, pattern: str) -> bool:
+    clean_path = normalize_path_text(path)
+    clean_pattern = normalize_path_text(pattern)
+    if not clean_pattern:
+        return False
+    if clean_pattern.endswith("/**"):
+        prefix = clean_pattern[:-3]
+        return clean_path == prefix or clean_path.startswith(prefix + "/")
+    return fnmatch.fnmatchcase(clean_path, clean_pattern)
+
+
+def any_pattern_matches(path: str, patterns: Iterable[str]) -> bool:
+    return any(matches_pattern(path, pattern) for pattern in patterns)
+
+
 def summarize_blueprint(root: Path, max_chars: int = 1400) -> str:
     path = aeci_dir(root) / "blueprint.md"
     if not path.exists():
@@ -309,6 +360,91 @@ def create_context(root: Path, task_id: str, agent: str = "codex") -> Path:
     return context_path
 
 
+def git_changed_files(root: Path) -> List[str]:
+    tracked = git_lines(root, ["diff", "--name-only", "HEAD", "--"])
+    untracked = git_lines(root, ["ls-files", "--others", "--exclude-standard"])
+    return sorted({normalize_path_text(path) for path in tracked + untracked if path.strip()})
+
+
+def git_lines(root: Path, args: List[str]) -> List[str]:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise WorkspaceError(result.stderr.strip() or f"git {' '.join(args)} failed")
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def evaluate_guard(
+    task_id: str,
+    changed_files: Iterable[str],
+    allowed_patterns: Iterable[str],
+    forbidden_patterns: Iterable[str],
+) -> GuardResult:
+    changed = sorted({normalize_path_text(path) for path in changed_files if path.strip()})
+    allowed = [normalize_path_text(pattern) for pattern in allowed_patterns if pattern.strip()]
+    forbidden = [normalize_path_text(pattern) for pattern in forbidden_patterns if pattern.strip()]
+    forbidden_violations = [path for path in changed if any_pattern_matches(path, forbidden)]
+    out_of_scope = [
+        path
+        for path in changed
+        if allowed and not any_pattern_matches(path, allowed)
+    ]
+    return GuardResult(
+        task_id=task_id,
+        changed_files=changed,
+        allowed_patterns=allowed,
+        forbidden_patterns=forbidden,
+        forbidden_violations=forbidden_violations,
+        out_of_scope_files=out_of_scope,
+    )
+
+
+def guard_task(root: Path, task_id: str, changed_files: Optional[Iterable[str]] = None) -> GuardResult:
+    require_workspace(root)
+    task_path = aeci_dir(root) / "tasks" / f"{task_id}.md"
+    if not task_path.exists():
+        raise WorkspaceError(f"Task card not found: {task_path}")
+
+    task_content = read_text(task_path)
+    changed = list(changed_files) if changed_files is not None else git_changed_files(root)
+    result = evaluate_guard(
+        task_id=task_id,
+        changed_files=changed,
+        allowed_patterns=section_bullets(task_content, "Allowed Files"),
+        forbidden_patterns=section_bullets(task_content, "Forbidden Files"),
+    )
+    append_event(
+        root,
+        "guard_ran",
+        task_id=task_id,
+        passed=result.passed,
+        changed_files=result.changed_files,
+        forbidden_violations=result.forbidden_violations,
+        out_of_scope_files=result.out_of_scope_files,
+    )
+    return result
+
+
+def guard_output(result: GuardResult) -> str:
+    lines = [
+        f"Guard: {result.task_id}",
+        f"Result: {'pass' if result.passed else 'fail'}",
+        f"Changed files: {len(result.changed_files)}",
+    ]
+    lines.extend(f"- {path}" for path in result.changed_files)
+    if result.forbidden_violations:
+        lines.append("Forbidden violations:")
+        lines.extend(f"- {path}" for path in result.forbidden_violations)
+    if result.out_of_scope_files:
+        lines.append("Out-of-scope files:")
+        lines.extend(f"- {path}" for path in result.out_of_scope_files)
+    return "\n".join(lines)
+
+
 def load_simple_config(root: Path) -> Dict[str, str]:
     path = aeci_dir(root) / "config.toml"
     if not path.exists():
@@ -386,6 +522,9 @@ def build_parser() -> argparse.ArgumentParser:
     context_parser.add_argument("task_id", help="task id, for example task-002")
     context_parser.add_argument("--agent", default="codex", help="target agent format suffix")
 
+    guard_parser = subparsers.add_parser("guard", help="check changed files against a task card")
+    guard_parser.add_argument("task_id", help="task id, for example task-003")
+
     return parser
 
 
@@ -420,6 +559,11 @@ def run(argv: Optional[List[str]] = None) -> int:
             path = create_context(root, args.task_id, args.agent)
             print(f"Created context: {path.relative_to(root)}")
             return 0
+
+        if args.command == "guard":
+            result = guard_task(root, args.task_id)
+            print(guard_output(result))
+            return 0 if result.passed else 1
 
     except WorkspaceError as exc:
         print(f"error: {exc}", file=sys.stderr)
