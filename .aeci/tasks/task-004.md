@@ -22,6 +22,8 @@ low
 - `.aeci/roadmap.md`
 - `.aeci/tasks/task-004.md`
 - `.aeci/contexts/**`
+- `.aeci/reviews/task-004.md`
+- `.aeci/episodes/task-004.md`
 - `.aeci/events.jsonl`
 
 ## Forbidden Files
@@ -44,4 +46,5 @@ doc-maintainer
 ## Recommended Checks
 
 - `python aeci.py status`
+- `python aeci.py guard task-004`
 - `git status --short --branch`

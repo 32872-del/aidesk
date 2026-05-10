@@ -60,6 +60,8 @@ Write the first manual sandbox/worktree workflow so execution Agents can work ou
 - `.aeci/roadmap.md`
 - `.aeci/tasks/task-004.md`
 - `.aeci/contexts/**`
+- `.aeci/reviews/task-004.md`
+- `.aeci/episodes/task-004.md`
 - `.aeci/events.jsonl`
 
 ## Forbidden Files

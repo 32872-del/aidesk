@@ -22,6 +22,28 @@ Goal: make the project usable as a basic local Agent Workspace.
 3. Add a basic guard command that checks changed files against allowed/forbidden scopes.
 4. Add a worktree helper only after the manual sandbox workflow is clear.
 
+## Manual Sandbox Workflow
+
+Use Git worktree as the first execution sandbox. Automation can come later; for now the goal is a repeatable manual loop.
+
+1. Pick a Task Card, for example `.aeci/tasks/task-004.md`.
+2. Generate or refresh a Context Pack:
+   `python aeci.py context task-004`.
+3. Create a short branch and worktree:
+   `git worktree add .aeci/sandboxes/task-004 -b work/task-004 main`.
+4. Open the sandbox path in the target Agent.
+5. Give the Agent the Context Pack and tell it to stay inside the Task Card scope.
+6. In the sandbox, run the relevant checks.
+7. In the sandbox, collect the patch:
+   `git diff -- . > ../artifacts/task-004.diff`.
+8. Back in the main workspace, inspect changed files and run:
+   `python aeci.py guard task-004`.
+9. Write Review and Episode files.
+10. When finished, remove the worktree:
+    `git worktree remove .aeci/sandboxes/task-004`.
+
+On Windows, keep sandbox paths short and close editors or terminals inside the worktree before cleanup. File locks can prevent `git worktree remove` from finishing.
+
 ## Not This Week
 
 - Web UI.

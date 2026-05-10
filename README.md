@@ -67,3 +67,33 @@ python -m unittest discover -s tests
 1. `task-002`：最小 CLI。
 2. `task-003`：基础 guard 检查。
 3. `task-004`：手工 worktree 沙箱流程。
+
+## 手工 Worktree 沙箱
+
+当前先手工使用 Git worktree 隔离执行 Agent：
+
+```powershell
+python aeci.py context task-004
+git worktree add .aeci/sandboxes/task-004 -b work/task-004 main
+```
+
+把 `.aeci/contexts/task-004.codex.md` 交给执行 Agent，并让它只在 `.aeci/sandboxes/task-004` 里工作。Agent 完成后，在沙箱里收集 diff：
+
+```powershell
+git diff -- . > ../artifacts/task-004.diff
+```
+
+回到主工作区验收：
+
+```powershell
+python aeci.py guard task-004
+git status --short --branch
+```
+
+确认不再需要沙箱后清理：
+
+```powershell
+git worktree remove .aeci/sandboxes/task-004
+```
+
+Windows 上尽量保持沙箱路径短；清理前关闭占用该目录的编辑器、终端和后台进程，否则文件锁可能导致 `git worktree remove` 失败。
