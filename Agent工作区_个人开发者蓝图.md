@@ -1,0 +1,3394 @@
+# Agent 工作区：个人开发者多 AI 协作系统蓝图
+
+版本：v0.1  
+日期：2026-05-10  
+定位：个人开发者可执行的 Agent 工作区 / Supervisor Console / 协议化协作层蓝图  
+
+---
+
+## 0. 文档目的
+
+这份文档的目的，是把今晚讨论的想法整理成一个完整蓝图。它不是企业投标书，不是融资 BP，也不是立刻要实现的代码说明。它是一份面向个人开发者的系统规划文档，用来回答几个核心问题：
+
+1. 你到底遇到了什么现实问题。
+2. 这些问题背后的共同根源是什么。
+3. 应该先做一个什么样的系统。
+4. Supervisor AI 应该站在什么位置。
+5. 记忆层、任务层、沙箱层、验收层、文档层应该怎么分工。
+6. 如何减少上下文压力。
+7. 如何避免 Agent 互相覆盖、失忆、越权和混乱。
+8. 现阶段应该分成哪些任务逐步推进。
+9. 可能遇到哪些问题，怎么处理。
+10. 未来如何从个人工具演进到协议层、多 Agent 工作流，甚至更远的 AI 公司运行时。
+
+这份文档尽量详细，但有一个边界：它不写具体代码。原因是你现在需要的是“应该怎么做、为什么这样做、怎么拆阶段、怎么判断方向是否正确”，不是马上进入实现细节。
+
+---
+
+## 1. 项目背景
+
+### 1.1 多 AI 编程成为个人开发者的新常态
+
+现在个人开发者已经很容易同时使用多个 AI 编程产品：
+
+- Codex。
+- Claude Code。
+- Cursor。
+- Windsurf。
+- Cline。
+- Continue。
+- GitHub Copilot。
+- 各类本地模型和 CLI Agent。
+
+这些工具都在快速变强。单个 Agent 已经可以完成局部开发任务：写函数、修 bug、改测试、解释代码、运行命令、重构局部模块。但现实问题是，当你同时使用多个 Agent 开发同一个项目时，它们之间没有共享工作秩序。
+
+每个 Agent 都像一个临时工：
+
+- 新窗口打开后不知道项目历史。
+- 不知道之前其他 Agent 做了什么。
+- 不知道哪些方案已经被否定。
+- 不知道哪些文件不能碰。
+- 不知道当前阶段目标。
+- 不知道项目里的隐性规范。
+
+你作为个人开发者，就被迫承担了项目经理、架构师、上下文搬运工、审查员、合并冲突处理者、记忆维护者等多个角色。
+
+### 1.2 当前工具的缺口
+
+现有 AI 编程工具主要解决的是“单个 Agent 如何更强地执行任务”。它们关注：
+
+- 读代码。
+- 写代码。
+- 运行测试。
+- 解释错误。
+- 生成 patch。
+- 在 IDE 内完成交互。
+
+但它们没有很好解决：
+
+- 多个 Agent 之间如何共享项目状态。
+- 一个 Agent 做完后，另一个 Agent 如何接着做。
+- 长任务中断后如何恢复。
+- 不同 Agent 如何遵守同一套工作纪律。
+- 如何防止多个 Agent 同时改乱同一个仓库。
+- 如何把项目记忆从某个 LLM 会话中剥离出来。
+- 如何让某个 Agent 接入后“获取记忆成为某个工作身份”，而不是靠 prompt 扮演。
+
+所以真正缺的不是更强的执行层，而是一个跨 Agent、跨会话、跨工具的工作区和协调层。
+
+### 1.3 问题不是“AI 不够强”，而是“AI 没有工作台”
+
+如果一个新人加入项目，你不会只给他说一句“修一下这个 bug”。你会给他：
+
+- 项目文档。
+- 当前目标。
+- 架构约定。
+- 禁止事项。
+- 任务背景。
+- 相关文件。
+- 验收标准。
+- 提交规范。
+
+但当你打开一个新 Agent 窗口时，这些东西通常都要你手动重新说。
+
+更准确地说，现在缺的是一个 Agent 工作台：
+
+- Agent 来到工作台，知道自己是谁。
+- Agent 看到当前任务。
+- Agent 看到项目记忆。
+- Agent 看到权限边界。
+- Agent 在隔离区工作。
+- Agent 提交产物。
+- 系统检查产物。
+- Supervisor 总结和建议下一步。
+
+这就是本项目的核心。
+
+---
+
+## 2. 项目总目标
+
+### 2.1 一句话目标
+
+构建一个面向个人开发者的 Agent 工作区，让多个 AI 编程产品能够围绕同一个项目共享任务、记忆、规范、沙箱、验收和工作日志，从而减少个人开发者的人肉协调负担。
+
+### 2.2 当前阶段目标
+
+当前阶段不是打造全自动 AI 公司，也不是做企业平台，而是实现一个个人开发者可用的控制台：
+
+- 你能在这里维护项目蓝图。
+- 你能在这里创建任务。
+- Supervisor AI 能读取项目状态并提出下一步建议。
+- 你确认后，任务可以被派发给外部 Agent。
+- 外部 Agent 在沙箱中工作。
+- 产物回来后由系统和 Supervisor 做初步验收。
+- 你最终决定是否合并。
+- 系统记录事件、生成复盘、更新记忆。
+
+### 2.3 长期目标
+
+长期目标可以分成三个层次。
+
+第一层：个人 Agent 工作区。
+
+它帮助你自己更好地使用多个 AI 产品。
+
+第二层：协议化协作层。
+
+它定义不同 Agent、工具和平台之间如何交换任务、上下文、产物、状态和记忆。
+
+第三层：AI 公司运行时。
+
+它允许多个 LLM、工具型 Agent、图像/视频/办公/浏览器/测试/部署工具接入同一个工作系统，形成自动化程度越来越高的工作流。
+
+但这些不是一步到位。正确路径是先从个人工作区做起。
+
+---
+
+## 3. 核心原则
+
+### 3.1 Supervisor 不是独裁者，而是控制台操作员
+
+你纠正得很重要：你不是想让一个 AI 管一群 AI，而是想让一个 AI 站在控制台前面。
+
+Supervisor AI 的职责是：
+
+- 读取项目状态。
+- 给出下一步计划。
+- 建议把任务派给哪个 Agent。
+- 自动生成任务包。
+- 在你授权后执行派发。
+- 监控任务结果。
+- 做初步验收。
+- 更新日志和文档。
+- 生成下一步建议。
+
+它不是唯一真相源。真正的真相源是系统里的任务、事件、记忆、文档、patch、测试结果和权限规则。
+
+Supervisor AI 是解释器、建议者、流程助手，不是系统状态本身。
+
+### 3.2 LLM 和记忆必须分离
+
+不要把记忆存进某个 LLM 会话里。
+
+正确做法是：
+
+- 记忆存在本地系统。
+- LLM 每次接入时读取必要记忆。
+- 身份由系统装载，而不是 prompt 表演。
+- 同一个 Agent Profile 可以由不同 LLM 承载。
+
+比如：
+
+```text
+backend-worker-A
+  职责：后端局部实现
+  权限：只能修改 services/backend/** 和 tests/backend/**
+  记忆：过去做过哪些任务、踩过哪些坑
+  当前任务：task-017
+```
+
+这次由 Claude 承载，下次由 Codex 承载，都可以。身份不绑定模型，身份绑定记忆、职责和权限。
+
+### 3.3 确定性系统优先，AI 决策其次
+
+AI 可以建议，但系统状态要由确定性机制维护。
+
+确定性系统负责：
+
+- 任务状态。
+- 权限边界。
+- worktree。
+- patch。
+- 事件日志。
+- guard 检查。
+- 合并记录。
+
+AI 负责：
+
+- 总结。
+- 建议。
+- 拆分。
+- 解释。
+- 生成任务包。
+- 复盘。
+
+这样即使 AI 出错，系统也不会失控。
+
+### 3.4 沙箱默认开启
+
+Agent 不应该直接修改主工作区。
+
+默认流程：
+
+```text
+任务创建
+→ 创建沙箱 / worktree
+→ Agent 在沙箱中工作
+→ 提交 patch
+→ 系统检查
+→ Supervisor 验收
+→ 你确认
+→ 合并
+```
+
+沙箱不是高级功能，而是基本安全措施。
+
+### 3.5 上下文按需编译，不全量灌入
+
+不要把完整项目历史塞给 Agent。
+
+每次任务应该生成 Context Pack：
+
+- 当前任务。
+- 相关文件。
+- 相关决策。
+- 相关 Lesson。
+- 允许/禁止范围。
+- 验收标准。
+- 推荐命令。
+
+Trace 全量日志只用于复盘，不用于每次上下文注入。
+
+### 3.6 先做工作流，再做协议
+
+协议很重要，但不能先抽象。
+
+先做一个具体工作区，验证真实工作流。然后把稳定对象抽象成协议：
+
+- Task Card。
+- Context Pack。
+- Agent Profile。
+- Capability Manifest。
+- Permission Grant。
+- Artifact Submit。
+- Review Result。
+- Memory Event。
+
+这样协议来自真实使用，不是空想 schema。
+
+---
+
+## 4. 系统总体形态
+
+### 4.1 总体架构
+
+```text
+┌───────────────────────────────────────────────┐
+│                 AECI Console                  │
+│  项目蓝图 / 任务计划 / 文档 / 日志 / 验收台    │
+└───────────────────────┬───────────────────────┘
+                        │
+┌───────────────────────▼───────────────────────┐
+│              Supervisor AI                     │
+│  计划建议 / 派发建议 / 验收总结 / 复盘更新      │
+└───────────────────────┬───────────────────────┘
+                        │
+┌───────────────────────▼───────────────────────┐
+│             Deterministic Core                 │
+│ Task Store / Memory / Policy / Event Log       │
+│ Sandbox / Artifact / Review / Context Compiler │
+└───────────────────────┬───────────────────────┘
+                        │
+┌───────────────────────▼───────────────────────┐
+│              Agent Connectors                  │
+│ Codex / Claude Code / Cursor / MCP / Local      │
+└───────────────────────┬───────────────────────┘
+                        │
+┌───────────────────────▼───────────────────────┐
+│              Execution Agents                  │
+│  代码 / 文档 / 测试 / 图片 / 视频 / 办公工具     │
+└───────────────────────────────────────────────┘
+```
+
+### 4.2 AECI Console
+
+Console 是你看到的工作台。
+
+它包含：
+
+- 项目蓝图。
+- 任务列表。
+- 当前 sprint / 当前阶段。
+- Agent 状态。
+- 沙箱状态。
+- patch 队列。
+- 验收报告。
+- 记忆和 Lesson。
+- 日志和复盘。
+
+一开始可以是 CLI + Markdown，不需要 Web UI。
+
+### 4.3 Supervisor AI
+
+Supervisor AI 是控制台前的智能助手。
+
+它的核心能力：
+
+- Observe：观察项目状态。
+- Orient：判断当前阶段和阻塞。
+- Recommend：建议下一步。
+- Dispatch：在你授权后派发任务。
+- Verify：验收产物。
+- Record：写复盘和更新文档。
+- Plan：给出下一轮计划。
+
+Supervisor AI 不直接成为工作系统本身。它每次都从系统状态恢复认知。
+
+### 4.4 Deterministic Core
+
+这是系统核心。
+
+它不依赖 LLM。
+
+职责：
+
+- 存任务。
+- 存事件。
+- 存记忆。
+- 编译上下文。
+- 管理权限。
+- 管理沙箱。
+- 接收产物。
+- 运行检查。
+- 记录验收。
+
+如果 Supervisor AI 换模型，这层不变。
+
+### 4.5 Agent Connectors
+
+连接外部 Agent 产品。
+
+不同 Agent 接入能力不同：
+
+- 有的支持 MCP，可以自动读取上下文和提交结果。
+- 有的只能通过 CLI 调用。
+- 有的只能打开外部窗口，需要生成任务包给你复制。
+- 有的可以直接在 sandbox 跑。
+
+系统应该允许多种接入级别，不要求一开始完全自动。
+
+### 4.6 Execution Agents
+
+执行层可以不限于 LLM 编码 Agent。
+
+未来可以包括：
+
+- 代码 Agent。
+- 测试 Agent。
+- 文档 Agent。
+- 生图 Agent。
+- 视频 Agent。
+- PPT Agent。
+- Excel Agent。
+- 浏览器 Agent。
+- 部署 Agent。
+
+这就是协议层的长期价值。
+
+---
+
+## 5. 核心对象设计
+
+### 5.1 Project Blueprint
+
+项目蓝图是长期方向。
+
+包含：
+
+- 项目目标。
+- 当前阶段。
+- 架构原则。
+- 技术栈。
+- 重要模块。
+- 已知风险。
+- 不做什么。
+- 未来方向。
+
+Blueprint 不应该太长。它是所有 Agent 共同理解项目的顶层地图。
+
+### 5.2 Task Card
+
+任务卡是最小工作单元。
+
+包含：
+
+- task_id。
+- 目标。
+- 背景。
+- 任务类型。
+- 风险等级。
+- 允许修改范围。
+- 禁止修改范围。
+- 验收标准。
+- 推荐 Agent。
+- 推荐测试。
+- 关联文档。
+- 关联 Lesson。
+
+任务卡应该由你或 Supervisor 创建，由你确认。
+
+### 5.3 Agent Profile
+
+Agent Profile 不是某个 LLM，而是一个工作身份。
+
+包含：
+
+- 名称。
+- 职责。
+- 能力标签。
+- 权限范围。
+- 行为规范。
+- 默认任务类型。
+- 历史 Episode。
+- 相关 Lesson。
+- 当前状态。
+
+比如：
+
+- backend-worker。
+- frontend-worker。
+- test-writer。
+- doc-maintainer。
+- reviewer。
+- supervisor。
+
+某个 profile 可以由不同 LLM 承载。
+
+### 5.4 Context Pack
+
+Context Pack 是给 Agent 的任务上下文。
+
+包含：
+
+- 当前任务。
+- 项目摘要。
+- 相关文件。
+- 相关决策。
+- 相关 Lesson。
+- 修改边界。
+- 验收标准。
+- 提交方式。
+
+Context Pack 是降低上下文压力的核心。
+
+### 5.5 Permission Grant
+
+权限授权。
+
+包含：
+
+- 可以读什么。
+- 可以写什么。
+- 可以运行什么命令。
+- 是否允许联网。
+- 是否允许安装依赖。
+- 是否允许修改配置。
+- 是否允许提交 patch。
+
+个人版一开始可以只做文件范围和命令建议，后续再强化。
+
+### 5.6 Sandbox / Worktree
+
+每个任务一个隔离工作区。
+
+记录：
+
+- task_id。
+- agent_profile。
+- base_commit。
+- worktree_path。
+- allowed_files。
+- forbidden_files。
+- status。
+
+### 5.7 Artifact
+
+Agent 的交付物。
+
+可能是：
+
+- patch。
+- diff。
+- 测试结果。
+- 文档。
+- 图片。
+- 视频。
+- 报告。
+- 数据表。
+
+不要只按代码设计。未来协议层要支持多类型产物。
+
+### 5.8 Review Result
+
+验收结果。
+
+包含：
+
+- 是否通过。
+- 测试结果。
+- guard 结果。
+- Supervisor 评价。
+- 人类决定。
+- 是否合并。
+- 后续动作。
+
+### 5.9 Memory Event
+
+记忆事件。
+
+包括：
+
+- task_created。
+- agent_assigned。
+- context_generated。
+- sandbox_created。
+- artifact_submitted。
+- review_completed。
+- lesson_proposed。
+- lesson_verified。
+
+---
+
+## 6. 记忆层设计
+
+### 6.1 Trace / Episode / Lesson
+
+记忆不能混成一团。
+
+分三层：
+
+Trace：发生过什么。
+
+- 原始事件。
+- 低密度。
+- 大体量。
+- 供排查和审计。
+
+Episode：一次任务的压缩记录。
+
+- 做了什么。
+- 谁做的。
+- 改了哪些文件。
+- 成功还是失败。
+- 失败原因是什么。
+
+Lesson：未来任务真正要用的经验。
+
+- 高密度。
+- 有 scope。
+- 有证据。
+- 有生命周期。
+- 可注入 Context Pack。
+
+### 6.2 为什么这样分
+
+如果把 Trace 全部喂给 Agent，会撑爆上下文。
+
+如果只写 Lesson，没有原始证据，未来无法复盘。
+
+如果只写 Episode，未来 Agent 仍然不知道哪些经验应该遵守。
+
+三层分别负责不同问题。
+
+### 6.3 Lesson 的设计
+
+Lesson 应该像规则或经验：
+
+```text
+scope: services/auth
+severity: must
+rule: 修改登录逻辑时必须跑 tests/auth/*
+reason: 之前 task-014 漏测导致回归
+evidence: episode-014
+status: active
+```
+
+Lesson 不应该是空泛总结：
+
+```text
+写代码要小心。
+注意测试。
+保持可维护性。
+```
+
+这类内容没有价值。
+
+### 6.4 Agent 不能直接写强记忆
+
+Agent 可以提出 lesson candidate，但不能直接写 active lesson。
+
+原因：
+
+- Agent 容易过度总结。
+- Agent 会写空泛经验。
+- Agent 可能基于错误理解总结错误规则。
+
+正确流程：
+
+```text
+Agent 提议 Lesson
+→ 进入 pending
+→ Supervisor 整理
+→ 你确认
+→ active
+```
+
+### 6.5 遗忘机制
+
+记忆需要遗忘。
+
+否则系统会变成噪声库。
+
+机制：
+
+- Lesson 有 TTL。
+- 过期进入 pending_review。
+- 长期不用进入 stale。
+- 被新规则替代时 superseded。
+- 成功 Episode 可以压缩。
+- 失败 Episode 长期保留。
+
+---
+
+## 7. Supervisor Console 工作循环
+
+### 7.1 Observe
+
+Supervisor 读取：
+
+- 当前任务。
+- 项目蓝图。
+- 事件日志。
+- 沙箱状态。
+- 未验收 artifact。
+- 最近失败。
+- 当前文档状态。
+
+它不靠自己的上下文记忆。
+
+### 7.2 Orient
+
+Supervisor 判断：
+
+- 当前项目处于哪个阶段。
+- 哪些任务阻塞。
+- 哪些任务可以并行。
+- 哪些任务风险高。
+- 哪些任务适合哪个 Agent。
+- 哪些文档过期。
+
+### 7.3 Recommend
+
+Supervisor 给你建议：
+
+- 下一步做什么。
+- 为什么优先做。
+- 建议派给谁。
+- 需要什么权限。
+- 是否需要沙箱。
+- 预期验收方式。
+
+### 7.4 Authorize
+
+你确认：
+
+- OK。
+- 修改任务。
+- 换 Agent。
+- 降低权限。
+- 暂停。
+
+这是控制点。
+
+### 7.5 Dispatch
+
+系统生成任务包并派发。
+
+如果目标 Agent 支持 MCP/API，可以自动派发。
+
+如果不支持，则生成可复制任务包和打开提示。
+
+不要要求第一版完全自动化。分级接入更现实。
+
+### 7.6 Verify
+
+任务完成后：
+
+- 收 artifact。
+- 检查文件范围。
+- 跑测试。
+- 跑 guard。
+- 总结 diff。
+- 判断是否符合验收标准。
+
+Supervisor 生成验收报告。
+
+### 7.7 Record
+
+验收后：
+
+- 更新任务状态。
+- 写 Episode。
+- 提出 Lesson。
+- 更新文档建议。
+- 记录下一步。
+
+---
+
+## 8. 派发机制设计
+
+### 8.1 派发不是复制 prompt
+
+你的目标是避免手工复制粘贴。
+
+系统应该把任务派发抽象成：
+
+```text
+dispatch(task_package, target_agent)
+```
+
+不同 target_agent 有不同 adapter。
+
+### 8.2 派发级别
+
+Level 0：手动。
+
+- 系统生成任务包。
+- 你复制到 Agent。
+
+Level 1：半自动。
+
+- 系统打开目标工作区。
+- 生成命令。
+- 你确认执行。
+
+Level 2：自动派发。
+
+- 通过 MCP / CLI / API 调用目标 Agent。
+- Agent 在 sandbox 中执行。
+
+Level 3：自动闭环。
+
+- 系统派发、收回、验收低风险任务。
+- 人只看最终报告。
+
+现在先做到 Level 0/1，再逐渐走向 Level 2。
+
+### 8.3 Adapter 设计
+
+每个 Agent Connector 应声明：
+
+- 支持自动派发吗。
+- 支持读取 Context Pack 吗。
+- 支持提交 patch 吗。
+- 支持沙箱运行吗。
+- 支持工具调用吗。
+- 支持回传结果吗。
+
+不要假设所有 Agent 都一样。
+
+---
+
+## 9. 验收机制设计
+
+### 9.1 验收层次
+
+第一层：结构检查。
+
+- 是否改了允许文件。
+- 是否改了禁止文件。
+- 是否新增依赖。
+- 是否改配置。
+
+第二层：测试检查。
+
+- 单元测试。
+- lint。
+- type check。
+- 相关测试。
+
+第三层：Supervisor Review。
+
+- 是否满足任务目标。
+- 是否有明显风险。
+- 是否需要补文档。
+- 是否需要补测试。
+
+第四层：你确认。
+
+- 合并。
+- 修改后再试。
+- 放弃。
+
+### 9.2 自动合并边界
+
+早期不自动合并。
+
+未来可自动合并低风险任务：
+
+- 文档。
+- 格式化。
+- 测试补全。
+- 小范围 bug。
+
+高风险任务永远需要你确认：
+
+- 架构。
+- 权限。
+- 数据库。
+- 部署。
+- 删除大量代码。
+- 公共 API。
+
+---
+
+## 10. 上下文压力控制
+
+### 10.1 不是越多越好
+
+Agent 失忆的问题不能靠无限塞上下文解决。
+
+上下文太多会导致：
+
+- 重点被淹没。
+- 旧信息污染。
+- token 成本上升。
+- Agent 随机忽略约束。
+
+### 10.2 分层上下文
+
+每次任务注入：
+
+1. 必须读：任务卡。
+2. 必须遵守：权限和限制。
+3. 必须注意：最多 3-5 条 Lesson。
+4. 相关参考：相关文件摘要。
+5. 可查：完整文档和 Trace。
+
+### 10.3 Context Pack 预算
+
+个人版可以做简单预算：
+
+- 任务目标：10%。
+- 文件摘要：40%。
+- 决策和 Lesson：30%。
+- 测试和命令：20%。
+
+如果超过预算，优先删旧 Episode，不删 active Lesson。
+
+---
+
+## 11. MCP / API / 协议工具
+
+### 11.1 MCP 的位置
+
+MCP 适合作为 Agent 和工作区之间的工具协议。
+
+可暴露：
+
+- 读取任务。
+- 获取上下文。
+- 查询记忆。
+- 提交 artifact。
+- 请求权限。
+- 运行 guard。
+
+### 11.2 A2A 的启发
+
+Agent2Agent 这类协议的价值在于 Agent 之间互操作。
+
+本项目可以借鉴：
+
+- Agent 能力声明。
+- 任务状态交换。
+- 产物提交。
+- 异步任务。
+
+但不需要一开始完整实现 A2A。
+
+### 11.3 自定义内部协议
+
+建议内部先定义自己的对象：
+
+- Task Card。
+- Context Pack。
+- Agent Profile。
+- Capability Manifest。
+- Permission Grant。
+- Artifact Submit。
+- Review Result。
+- Memory Event。
+
+再把它们映射到 MCP / API / 文件。
+
+### 11.4 现成工具
+
+可以利用：
+
+- Git worktree。
+- SQLite。
+- Markdown。
+- JSONL。
+- MCP SDK。
+- pytest / ruff / eslint。
+- ripgrep。
+- tree-sitter。
+- semgrep。
+
+不需要一开始做所有东西。
+
+---
+
+## 12. 当前阶段任务拆分
+
+### 12.1 阶段 A：手工工作流
+
+目标：不写复杂系统，先跑通流程。
+
+任务：
+
+1. 写一份项目蓝图。
+2. 写一张任务卡。
+3. 手动生成 Context Pack。
+4. 手动创建 worktree。
+5. 让 Agent 执行。
+6. 收 patch。
+7. 手动验收。
+8. 写 Episode。
+9. 写 Lesson。
+
+成功标准：
+
+- 你觉得流程能减少混乱。
+
+### 12.2 阶段 B：本地工作区 MVP
+
+目标：把手工流程工具化。
+
+任务：
+
+1. 初始化 `.aeci/`。
+2. 管理任务卡。
+3. 管理项目蓝图。
+4. 管理 Lesson。
+5. 生成 Context Pack。
+6. 创建 worktree。
+7. 保存 patch。
+8. 运行基础 guard。
+9. 记录事件。
+
+成功标准：
+
+- 你连续用 10 个任务。
+
+### 12.3 阶段 C：Supervisor Console
+
+目标：让 Supervisor 站在控制台前。
+
+任务：
+
+1. Supervisor 读取当前状态。
+2. 生成下一步建议。
+3. 生成派发建议。
+4. 生成任务包。
+5. 验收 patch。
+6. 写 Episode。
+7. 提出 Lesson。
+8. 更新文档建议。
+
+成功标准：
+
+- 你不再需要自己写大段传话 prompt。
+
+### 12.4 阶段 D：MCP 接入
+
+目标：减少手动复制。
+
+任务：
+
+1. 暴露读取任务。
+2. 暴露获取上下文。
+3. 暴露提交 artifact。
+4. 暴露查询 Lesson。
+5. 暴露 guard。
+
+成功标准：
+
+- 至少一个外部 Agent 可以通过 MCP 完成任务闭环。
+
+### 12.5 阶段 E：协议化
+
+目标：让系统不只服务代码 Agent。
+
+任务：
+
+1. 固化 Task Card schema。
+2. 固化 Context Pack schema。
+3. 固化 Artifact schema。
+4. 支持非代码 artifact。
+5. 支持图片/视频/办公工具接入。
+
+成功标准：
+
+- 一个非代码工具也能接任务、交产物、被验收。
+
+### 12.6 阶段 F：半自动多 Agent 工作流
+
+目标：低风险任务自动化。
+
+任务：
+
+1. 自动选择 Agent。
+2. 自动派发低风险任务。
+3. 自动验收低风险 patch。
+4. 自动复盘。
+5. 人只处理异常。
+
+成功标准：
+
+- 文档、测试、小修复类任务可以半自动完成。
+
+---
+
+## 13. 可能遇到的问题与解决方案
+
+### 13.1 Agent 不支持自动接入
+
+问题：有些产品不能被外部系统自动派发任务。
+
+解决：
+
+- 先生成任务包。
+- 提供一键复制。
+- 后续通过 MCP/API/CLI 逐步自动化。
+
+### 13.2 Agent 绕过权限
+
+问题：Agent 直接改了 forbidden files。
+
+解决：
+
+- 事后 diff 检查。
+- 越界 patch 标红。
+- 不自动合并。
+- 高风险任务必须人工确认。
+
+### 13.3 Supervisor 误判
+
+问题：Supervisor 建议错了。
+
+解决：
+
+- 它只建议，不直接执行高风险动作。
+- 关键步骤需要你确认。
+- 所有建议写入日志。
+
+### 13.4 记忆变成噪声
+
+问题：Lesson 太多，Agent 忽略。
+
+解决：
+
+- 每次最多注入 3-5 条。
+- Lesson 有 TTL。
+- pending 需要确认。
+- stale 不注入。
+
+### 13.5 上下文太长
+
+问题：Context Pack 变成小型文档库。
+
+解决：
+
+- 分层注入。
+- 强制预算。
+- 默认只放相关文件摘要。
+- Trace 不注入。
+
+### 13.6 沙箱管理复杂
+
+问题：worktree 越来越多，清理麻烦。
+
+解决：
+
+- 每个任务有状态。
+- done / abandoned 后提示清理。
+- 保留 patch 和 Episode。
+- 删除 worktree。
+
+### 13.7 你自己不用
+
+问题：系统太麻烦，最终不用。
+
+解决：
+
+- 先手工跑流程。
+- 只自动化最烦的一步。
+- 每阶段都以“自己是否持续使用”为标准。
+
+---
+
+## 14. 未来发展路线
+
+### 14.1 路线一：个人 Agent 工作区
+
+持续打磨个人开发体验。
+
+价值：
+
+- 最现实。
+- 最容易验证。
+- 最不依赖市场。
+
+### 14.2 路线二：协议层
+
+把内部对象标准化。
+
+价值：
+
+- 不怕单个 Agent 产品变强。
+- 可跨 LLM、图像、视频、办公工具。
+- 长期上限高。
+
+风险：
+
+- 太早做会空。
+- 没有工作流验证的协议没人用。
+
+### 14.3 路线三：团队协作
+
+多人共享项目工作区。
+
+新增：
+
+- 多用户。
+- 权限。
+- PR 集成。
+- 团队记忆。
+- 审计。
+
+需要等个人版成熟后。
+
+### 14.4 路线四：AI 公司运行时
+
+长期愿景。
+
+形态：
+
+- 多 Agent 能力网络。
+- 自动任务拆分。
+- 自动派发。
+- 自动验收。
+- 自动复盘。
+- 工具链全接入。
+
+但这不能跳过前面阶段。
+
+---
+
+## 15. 你没提但值得考虑的想法
+
+### 15.1 Agent 能力简历
+
+每个 Agent Profile 可以形成能力简历：
+
+- 擅长任务。
+- 失败类型。
+- 平均耗时。
+- 常见问题。
+- 推荐使用场景。
+
+这未来可以帮助 Supervisor 选择 Agent。
+
+### 15.2 任务风险分级
+
+任务应该分风险：
+
+- low：文档、测试、格式化。
+- medium：局部实现。
+- high：架构、接口、数据。
+- critical：部署、权限、安全。
+
+不同风险对应不同权限。
+
+### 15.3 失败模式统计
+
+长期统计：
+
+- context_missing。
+- scope_creep。
+- test_insufficient。
+- api_misuse。
+- merge_conflict。
+- hallucination。
+
+这会告诉你系统最需要改哪里。
+
+### 15.4 项目阶段感知
+
+Supervisor 不只看任务，还要看项目阶段：
+
+- 探索期。
+- MVP。
+- 稳定期。
+- 重构期。
+- 发布期。
+
+不同阶段的策略不同。
+
+### 15.5 非代码工作流
+
+未来可以接：
+
+- 设计图。
+- 宣传图。
+- 演示视频。
+- 产品文档。
+- 用户反馈分析。
+- 表格整理。
+
+这会让系统从代码工作台扩展成完整个人生产工作台。
+
+---
+
+## 16. 最终建议
+
+你现在最应该做的是：
+
+> 一个本地 Agent 工作区，带 Supervisor Console，内部协议化，外部逐步接入多个 Agent 和工具。
+
+不要一开始做全自动 AI 公司。
+
+不要一开始只做抽象协议。
+
+先做：
+
+- 蓝图。
+- 任务卡。
+- Context Pack。
+- Agent Profile。
+- 沙箱。
+- patch。
+- guard。
+- Supervisor 建议。
+- 验收。
+- Episode / Lesson。
+
+跑通后再做：
+
+- MCP。
+- 自动派发。
+- 协议化。
+- 多 Agent 半自动工作流。
+- 团队版。
+- AI 公司运行时。
+
+最终目标可以很大，但第一步必须很具体：
+
+> 让你自己不再做人肉传话筒、人肉记忆体、人肉合并器。
+
+如果这个目标达成，项目就成立。
+
+---
+
+## 17. Supervisor Console 详细设计
+
+### 17.1 Supervisor 看到的控制台信息
+
+Supervisor AI 每次工作前，不应该依赖自己的历史对话，而应该从控制台状态重新构建认知。
+
+它需要看到：
+
+- 项目蓝图摘要。
+- 当前阶段。
+- 当前任务列表。
+- 阻塞任务。
+- 最近完成任务。
+- 未验收 artifact。
+- 最近失败 Episode。
+- active Lesson。
+- 当前 worktree 列表。
+- 主分支状态。
+- 测试状态。
+- 文档状态。
+
+这意味着系统需要一个“Supervisor Context View”。它不是给执行 Agent 的 Context Pack，而是给 Supervisor 的控制台视图。
+
+Supervisor Context View 应该更偏全局，但仍然要短：
+
+```text
+当前项目阶段：MVP 开发
+当前目标：跑通个人版 Agent 工作区最小闭环
+正在进行任务：task-012, task-013
+待验收产物：task-011 patch
+最近风险：task-009 因 allowed_files 缺失导致越界修改
+建议关注：补齐 Guard 检查和 worktree 清理
+```
+
+### 17.2 Supervisor 的输出格式
+
+Supervisor 的输出不应该是普通聊天，而应该结构化。
+
+建议固定为：
+
+```text
+观察：
+- 当前有哪些事实。
+
+判断：
+- 当前最大问题是什么。
+
+建议：
+- 下一步做什么。
+
+派发建议：
+- 任务 X → Agent Y。
+
+风险：
+- 可能出什么问题。
+
+需要你确认：
+- OK / 修改 / 拒绝。
+```
+
+这样你不会被长篇建议淹没。
+
+### 17.3 Supervisor 决策权限
+
+Supervisor 的权限分级：
+
+Level 0：只读观察。
+
+- 总结状态。
+- 汇总日志。
+- 提醒风险。
+
+Level 1：建议。
+
+- 建议任务。
+- 建议派发。
+- 建议验收结论。
+
+Level 2：授权后执行。
+
+- 你说 OK 后，它可以调用 dispatch。
+- 可以创建 Context Pack。
+- 可以创建 sandbox。
+- 可以运行 guard。
+
+Level 3：低风险自动执行。
+
+- 文档更新。
+- 格式化。
+- 测试补全。
+
+Level 4：禁止自动执行。
+
+- 架构大改。
+- 删除大量代码。
+- 数据库迁移。
+- 权限/安全/部署。
+
+当前阶段只做到 Level 1/2。
+
+### 17.4 Supervisor 如何验收
+
+Supervisor 验收不是“凭感觉看代码”，而是基于证据。
+
+它应该读取：
+
+- Task Card。
+- Artifact。
+- diff。
+- changed_files。
+- guard report。
+- test output。
+- lint output。
+- previous lessons。
+
+然后输出：
+
+```text
+验收结论：建议通过 / 建议修改 / 建议拒绝
+
+理由：
+- 是否满足任务目标。
+- 是否越界。
+- 测试是否通过。
+- 是否有风险。
+
+建议动作：
+- 合并。
+- 让原 Agent 修改。
+- 派给 Reviewer Agent。
+- 放弃 patch。
+```
+
+### 17.5 Supervisor 如何更新文档
+
+每次任务结束后，Supervisor 应提出文档更新建议，而不是直接无脑写文档。
+
+可更新对象：
+
+- 任务日志。
+- Episode。
+- Lesson candidate。
+- 项目蓝图。
+- README。
+- 架构文档。
+- 已知问题。
+
+更新分级：
+
+- 自动写入：任务日志、Episode。
+- pending：Lesson、架构文档、蓝图变更。
+- 手动确认：强规则、长期决策。
+
+---
+
+## 18. 协议对象详细设计
+
+### 18.1 Task Card 协议
+
+Task Card 是所有工作的入口。
+
+字段建议：
+
+```text
+task_id
+title
+objective
+background
+task_type
+risk_level
+allowed_files
+forbidden_files
+acceptance_criteria
+suggested_agent_profile
+suggested_tests
+related_docs
+related_lessons
+created_by
+status
+```
+
+关键设计：
+
+- `objective` 必填。
+- `acceptance_criteria` 至少一条。
+- 高风险任务必须填写 `forbidden_files`。
+- 如果没有 `allowed_files`，默认不能自动执行。
+
+### 18.2 Context Pack 协议
+
+字段建议：
+
+```text
+context_pack_id
+task_id
+project_summary
+task_card
+relevant_files
+relevant_decisions
+applicable_lessons
+allowed_scope
+forbidden_scope
+recommended_commands
+submission_instructions
+```
+
+注意：
+
+- `applicable_lessons` 不超过 5 条。
+- `relevant_files` 第一版只放摘要，不放完整文件。
+- `submission_instructions` 必须明确告诉 Agent 不要直接合并。
+
+### 18.3 Agent Profile 协议
+
+字段建议：
+
+```text
+agent_profile_id
+name
+role
+capabilities
+preferred_task_types
+default_permissions
+behavior_rules
+memory_scope
+recent_episodes
+known_failure_modes
+```
+
+示例：
+
+```text
+name: test-writer
+role: 补测试和回归验证
+capabilities: test, pytest, edge-case
+default_permissions: tests/**
+behavior_rules:
+  - 不修改生产代码，除非任务明确允许。
+  - 如果发现生产代码 bug，只提交报告。
+```
+
+### 18.4 Capability Manifest
+
+每个外部 Agent 或工具声明自己能做什么。
+
+字段：
+
+```text
+connector_id
+agent_name
+supports_mcp
+supports_auto_dispatch
+supports_patch_submit
+supports_sandbox
+supports_artifact_types
+supported_languages
+limitations
+```
+
+这样 Supervisor 才能选择合适工具。
+
+### 18.5 Permission Grant
+
+字段：
+
+```text
+grant_id
+task_id
+agent_profile_id
+read_scope
+write_scope
+command_scope
+network_allowed
+install_dependency_allowed
+expires_at
+approved_by
+```
+
+个人版先不一定能强制执行所有权限，但要先记录。
+
+### 18.6 Artifact Submit
+
+字段：
+
+```text
+artifact_id
+task_id
+agent_profile_id
+artifact_type
+sandbox_path
+patch_path
+changed_files
+test_output
+notes
+submitted_at
+```
+
+Artifact 不限代码 patch，未来可以是图片、视频、文档、表格。
+
+### 18.7 Review Result
+
+字段：
+
+```text
+review_id
+artifact_id
+structural_check
+test_check
+supervisor_review
+human_decision
+decision_reason
+next_action
+```
+
+### 18.8 Memory Event
+
+字段：
+
+```text
+event_id
+timestamp
+actor
+event_type
+task_id
+payload
+correlation_id
+```
+
+---
+
+## 19. MCP / API 工具清单
+
+### 19.1 MCP Tools 第一批
+
+`workspace_status`
+
+用途：让 Supervisor 或 Agent 查看当前项目状态。
+
+返回：
+
+- 当前任务。
+- 待验收 artifact。
+- 最近风险。
+
+`task_read`
+
+用途：读取任务卡。
+
+`task_list`
+
+用途：列出任务。
+
+`context_fetch`
+
+用途：获取某任务的 Context Pack。
+
+`memory_search`
+
+用途：查询相关 Lesson。
+
+`artifact_submit`
+
+用途：提交 patch 或其他产物。
+
+`guard_run`
+
+用途：运行基本 guard。
+
+`review_read`
+
+用途：读取验收结果。
+
+### 19.2 Supervisor 专用 Tools
+
+`plan_next`
+
+用途：生成下一步计划。
+
+`dispatch_prepare`
+
+用途：准备任务包和权限授权。
+
+`dispatch_execute`
+
+用途：在用户确认后派发任务。
+
+`episode_write`
+
+用途：写任务复盘。
+
+`lesson_propose`
+
+用途：提出 Lesson candidate。
+
+`docs_update_propose`
+
+用途：提出文档更新建议。
+
+### 19.3 API 设计原则
+
+不管 MCP 怎么变化，内部应该有稳定 API。
+
+API 对象应该围绕：
+
+- tasks。
+- context_packs。
+- agents。
+- permissions。
+- sandboxes。
+- artifacts。
+- reviews。
+- memory。
+
+MCP 只是 API 的一种外壳。
+
+### 19.4 可用现成工具
+
+可以直接用：
+
+- Git worktree 管理沙箱。
+- pytest / ruff / eslint 做验证。
+- SQLite 做状态。
+- JSONL 做事件流。
+- Markdown 做文档。
+- MCP SDK 做接入。
+- ripgrep 做搜索。
+- tree-sitter 后续做结构分析。
+
+需要自己开发：
+
+- Task Card 管理。
+- Context Pack 生成。
+- Supervisor Context View。
+- Agent Profile。
+- Permission Grant。
+- Artifact Submit。
+- Review Result。
+- Trace / Episode / Lesson 流程。
+
+---
+
+## 20. 更细的当前阶段任务计划
+
+### 20.1 第 0 步：定义工作区目录
+
+目标：确定所有数据放哪里。
+
+建议结构：
+
+```text
+.aeci/
+  blueprint.md
+  tasks/
+  contexts/
+  agents/
+  lessons/
+  episodes/
+  artifacts/
+  reviews/
+  events.jsonl
+  state.db
+```
+
+输出：
+
+- 目录结构说明。
+- 每个目录职责。
+
+风险：
+
+- 结构过早复杂。
+
+解决：
+
+- 只创建用到的目录。
+
+### 20.2 第 1 步：写项目蓝图
+
+目标：让项目有顶层方向。
+
+内容：
+
+- 项目目标。
+- 当前阶段。
+- 不做什么。
+- 核心模块。
+- 技术选择。
+- 当前风险。
+
+输出：
+
+- `.aeci/blueprint.md`
+
+### 20.3 第 2 步：任务卡流程
+
+目标：任务不再靠临时 prompt。
+
+输出：
+
+- 创建任务。
+- 修改任务。
+- 任务状态。
+- 任务 Markdown。
+
+风险：
+
+- 任务卡太麻烦。
+
+解决：
+
+- 允许极简任务卡。
+- 后续逐步补字段。
+
+### 20.4 第 3 步：Context Pack
+
+目标：减少复制粘贴。
+
+输出：
+
+- 根据任务生成上下文。
+- 引入蓝图、任务卡、Lesson、文件摘要。
+
+风险：
+
+- Pack 太长。
+
+解决：
+
+- 限制长度。
+- 优先相关内容。
+
+### 20.5 第 4 步：沙箱
+
+目标：Agent 不直接污染主工作区。
+
+输出：
+
+- 每个任务一个 worktree。
+- 记录 base commit。
+- 记录 sandbox path。
+
+风险：
+
+- Windows 路径和文件锁。
+
+解决：
+
+- 路径尽量短。
+- 提供清理命令。
+
+### 20.6 第 5 步：Artifact 提交
+
+目标：Agent 产物统一回收。
+
+输出：
+
+- patch。
+- changed_files。
+- notes。
+- test_output。
+
+### 20.7 第 6 步：Guard
+
+目标：基础风险检查。
+
+检查：
+
+- forbidden files。
+- dependency changes。
+- config changes。
+- test changes。
+- secret。
+
+### 20.8 第 7 步：Supervisor 验收
+
+目标：让 Supervisor 读取 artifact 和 guard，写验收建议。
+
+输出：
+
+- 建议通过。
+- 建议修改。
+- 建议拒绝。
+- 风险说明。
+
+### 20.9 第 8 步：Episode / Lesson
+
+目标：形成记忆闭环。
+
+输出：
+
+- Episode。
+- Lesson candidate。
+- 下一步建议。
+
+### 20.10 第 9 步：MCP 接入
+
+目标：减少手动复制。
+
+输出：
+
+- task_read。
+- context_fetch。
+- artifact_submit。
+- guard_run。
+
+---
+
+## 21. 工作纪律与流程规范
+
+### 21.1 Agent 工作纪律
+
+所有 Agent 都应遵守：
+
+1. 先读任务卡。
+2. 再读 Context Pack。
+3. 只改授权范围内文件。
+4. 不直接合并主分支。
+5. 完成后提交 artifact。
+6. 不修改验收规则。
+7. 不自行扩大任务范围。
+8. 不把猜测写成事实。
+
+### 21.2 Supervisor 工作纪律
+
+Supervisor 应遵守：
+
+1. 每次建议必须基于当前状态。
+2. 不凭旧上下文做判断。
+3. 高风险动作必须请求你确认。
+4. 验收必须引用证据。
+5. Lesson 只能提议，不能直接强制生效。
+6. 文档变更要区分自动日志和需确认决策。
+
+### 21.3 人类工作纪律
+
+你也需要给自己规则：
+
+1. 不直接让 Agent 在主工作区乱改。
+2. 尽量用任务卡。
+3. 高风险任务写清 forbidden files。
+4. 合并前看 review。
+5. 每周清理 stale Lesson。
+
+系统不是替代纪律，而是让纪律变得容易执行。
+
+---
+
+## 22. AI 公司运行时的远期想象
+
+### 22.1 不是模拟人类公司
+
+未来如果长成“AI 公司”，不应该是：
+
+- AI CEO。
+- AI CTO。
+- AI 员工。
+
+这种人类组织模拟容易误导。
+
+更准确的形态是：
+
+```text
+目标
+→ 计划
+→ 任务分解
+→ 能力匹配
+→ 权限授权
+→ 沙箱执行
+→ 产物验收
+→ 记忆更新
+→ 下一轮计划
+```
+
+### 22.2 能力网络
+
+每个 Agent 或工具是能力节点。
+
+能力可能包括：
+
+- 代码实现。
+- 测试。
+- Review。
+- 文档。
+- 设计。
+- 图片。
+- 视频。
+- 表格。
+- 浏览器。
+- 部署。
+
+Supervisor 不管理“员工人格”，而是管理能力调用。
+
+### 22.3 全自动的前提
+
+全自动需要满足：
+
+- 任务可清晰描述。
+- 权限可限制。
+- 产物可验证。
+- 失败可回滚。
+- 记忆可更新。
+- 人类可介入。
+
+没有这些前提，全自动就是高风险。
+
+### 22.4 可以先自动的任务
+
+- 文档同步。
+- 测试补全。
+- 格式化。
+- 简单 bug。
+- 生成报告。
+- 图片初稿。
+- 文案初稿。
+
+不应先自动：
+
+- 架构决策。
+- 数据迁移。
+- 权限安全。
+- 生产部署。
+- 商业判断。
+
+---
+
+## 23. 协议层路线
+
+### 23.1 为什么协议层有价值
+
+Agent 产品会变强，但不同工具之间仍然需要互联。
+
+协议层定义：
+
+- 如何接任务。
+- 如何拿上下文。
+- 如何声明能力。
+- 如何申请权限。
+- 如何提交产物。
+- 如何被验收。
+- 如何写入记忆。
+
+只要世界上有多个 Agent 和多个工具，协议层就有价值。
+
+### 23.2 协议层的风险
+
+协议太早做会空。
+
+没有真实工作流验证的协议通常没人用。
+
+所以应该：
+
+1. 先做工作区。
+2. 在工作区里跑真实任务。
+3. 抽象稳定对象。
+4. 再开放协议。
+
+### 23.3 协议对象优先级
+
+第一批：
+
+- Task Card。
+- Context Pack。
+- Artifact Submit。
+- Review Result。
+
+第二批：
+
+- Agent Profile。
+- Capability Manifest。
+- Permission Grant。
+
+第三批：
+
+- Memory Event。
+- Workflow Plan。
+- Tool Contract。
+
+---
+
+## 24. 成功标准
+
+### 24.1 第一阶段成功
+
+你自己使用时：
+
+- 少复制 prompt。
+- 少解释项目。
+- Agent 少越界。
+- patch 更容易回收。
+- 失败更容易复盘。
+
+### 24.2 第二阶段成功
+
+Supervisor 能：
+
+- 给出可用下一步建议。
+- 自动生成任务包。
+- 帮你验收结果。
+- 写复盘。
+
+### 24.3 第三阶段成功
+
+至少一个外部 Agent 可以通过 MCP/API 完成：
+
+- 接任务。
+- 拿上下文。
+- 在沙箱工作。
+- 提交 artifact。
+- 被验收。
+
+### 24.4 长期成功
+
+系统可以接入不同类型工具：
+
+- LLM。
+- 图像。
+- 视频。
+- 文档。
+- 浏览器。
+- 表格。
+
+并通过同一套任务和产物协议协作。
+
+---
+
+## 25. 建议文件与目录结构
+
+### 25.1 总体目录
+
+个人开发者版应默认在项目根目录创建 `.aeci/`。
+
+建议结构：
+
+```text
+.aeci/
+  blueprint.md
+  config.toml
+  events.jsonl
+  state.db
+  tasks/
+  contexts/
+  agents/
+  lessons/
+  episodes/
+  artifacts/
+  reviews/
+  sandboxes/
+  exports/
+```
+
+### 25.2 blueprint.md
+
+用途：项目顶层蓝图。
+
+内容：
+
+- 项目目标。
+- 当前阶段。
+- 技术栈。
+- 主要模块。
+- 当前重点。
+- 不做事项。
+- 风险。
+- 下一阶段计划。
+
+Blueprint 应该短而稳定。它不是开发日志，不要每天大改。
+
+### 25.3 config.toml
+
+用途：保存本地工作区配置。
+
+内容：
+
+- 默认 Agent。
+- 默认沙箱路径。
+- 默认测试命令。
+- 默认上下文预算。
+- 是否启用 MCP。
+- 是否自动导出规则文件。
+
+### 25.4 events.jsonl
+
+用途：事件真相源。
+
+每一行是一个事件。
+
+事件类型：
+
+- task_created。
+- context_generated。
+- sandbox_created。
+- agent_dispatched。
+- artifact_submitted。
+- guard_ran。
+- review_completed。
+- lesson_proposed。
+- lesson_verified。
+- merge_completed。
+
+### 25.5 state.db
+
+用途：当前状态投影。
+
+可以由 events.jsonl 重建。
+
+存：
+
+- tasks。
+- agents。
+- lessons。
+- episodes。
+- artifacts。
+- reviews。
+
+### 25.6 tasks/
+
+每个任务一个 Markdown 或 YAML 文件。
+
+例如：
+
+```text
+tasks/task-001.md
+tasks/task-002.md
+```
+
+任务文件必须人类可读。
+
+### 25.7 contexts/
+
+保存生成给 Agent 的 Context Pack。
+
+例如：
+
+```text
+contexts/task-001.codex.md
+contexts/task-001.claude.md
+```
+
+不同 Agent 可能需要不同格式，但内容源头应该一致。
+
+### 25.8 agents/
+
+保存 Agent Profile。
+
+例如：
+
+```text
+agents/supervisor.md
+agents/backend-worker.md
+agents/test-writer.md
+agents/doc-maintainer.md
+```
+
+### 25.9 lessons/
+
+保存 active 和 pending lesson。
+
+建议：
+
+```text
+lessons/active/
+lessons/pending/
+lessons/stale/
+```
+
+### 25.10 episodes/
+
+保存任务复盘。
+
+每个任务结束后生成一个 episode。
+
+### 25.11 artifacts/
+
+保存 Agent 提交物。
+
+包括：
+
+- patch。
+- diff。
+- 文档。
+- 图片。
+- 测试输出。
+
+### 25.12 reviews/
+
+保存验收报告。
+
+包括：
+
+- guard report。
+- Supervisor review。
+- human decision。
+
+---
+
+## 26. 详细开发路线：12 周个人版计划
+
+### 26.1 第 1 周：手工流程和蓝图
+
+目标：先不写复杂工具，确认流程能用。
+
+任务：
+
+1. 创建 `.aeci/` 目录。
+2. 写 `blueprint.md`。
+3. 手写 3 张任务卡。
+4. 手写 3 份 Context Pack。
+5. 手动创建 worktree。
+6. 用一个 Agent 完成一个小任务。
+7. 写 Episode。
+
+验收：
+
+- 你能明确说出流程是否减少混乱。
+- 至少有一个任务通过“任务卡 → Agent → patch → review”闭环。
+
+### 26.2 第 2 周：任务卡和事件日志
+
+目标：任务和事件变成稳定格式。
+
+任务：
+
+1. 固化 Task Card 模板。
+2. 固化事件格式。
+3. 记录 task_created。
+4. 记录 context_generated。
+5. 记录 artifact_submitted。
+6. 记录 review_completed。
+
+验收：
+
+- 所有操作至少能留下 events.jsonl。
+- 你可以从事件日志回看一个任务发生了什么。
+
+### 26.3 第 3 周：Context Pack 自动生成
+
+目标：减少复制粘贴。
+
+任务：
+
+1. 从任务卡读取目标。
+2. 引入 blueprint。
+3. 引入相关 Lesson。
+4. 引入相关文件摘要。
+5. 输出 Context Pack。
+
+验收：
+
+- 对 3 个任务生成 Context Pack。
+- 你愿意直接把 Pack 给 Agent 使用。
+
+### 26.4 第 4 周：沙箱和 patch
+
+目标：Agent 不再直接污染主目录。
+
+任务：
+
+1. 为任务创建 worktree。
+2. 记录 base commit。
+3. Agent 在 worktree 中执行。
+4. 提交 patch。
+5. 记录 changed_files。
+
+验收：
+
+- 至少两个任务在独立 worktree 中完成。
+- 主工作区没有被 Agent 直接改乱。
+
+### 26.5 第 5 周：基础 Guard
+
+目标：降低明显失控。
+
+任务：
+
+1. 检查 forbidden files。
+2. 检查依赖文件变化。
+3. 检查配置文件变化。
+4. 检查 secret。
+5. 检查源码和测试是否匹配。
+
+验收：
+
+- guard 能指出至少一类真实风险。
+- guard 报告足够清楚，不需要猜。
+
+### 26.6 第 6 周：Supervisor 只读视图
+
+目标：Supervisor 能看懂当前状态。
+
+任务：
+
+1. 生成 Supervisor Context View。
+2. 包含当前任务。
+3. 包含待验收 artifact。
+4. 包含最近失败。
+5. 包含下一步候选。
+
+验收：
+
+- Supervisor 能基于视图给出合理下一步建议。
+
+### 26.7 第 7 周：Supervisor 派发建议
+
+目标：减少你写派发 prompt。
+
+任务：
+
+1. Supervisor 生成派发建议。
+2. 生成目标 Agent。
+3. 生成权限建议。
+4. 生成任务包。
+5. 你确认后使用。
+
+验收：
+
+- 至少 3 次任务派发不需要你手写大段 prompt。
+
+### 26.8 第 8 周：Supervisor 验收
+
+目标：让 Supervisor 做初步 review。
+
+任务：
+
+1. 读取 patch。
+2. 读取 guard。
+3. 读取 test output。
+4. 对照验收标准。
+5. 生成 review。
+
+验收：
+
+- Supervisor 的 review 至少能帮你发现一类问题或节省 review 时间。
+
+### 26.9 第 9 周：Episode / Lesson 闭环
+
+目标：形成记忆。
+
+任务：
+
+1. 每个任务完成后生成 Episode。
+2. 支持 Lesson candidate。
+3. 支持人工确认 active。
+4. Context Pack 注入 active Lesson。
+
+验收：
+
+- 至少 5 条 Lesson 被真实任务引用。
+
+### 26.10 第 10 周：MCP v0
+
+目标：减少手动复制。
+
+任务：
+
+1. 暴露 task_read。
+2. 暴露 context_fetch。
+3. 暴露 artifact_submit。
+4. 暴露 guard_run。
+
+验收：
+
+- 至少一个支持 MCP 的 Agent 能读取任务和上下文。
+
+### 26.11 第 11 周：清理体验
+
+目标：降低摩擦。
+
+任务：
+
+1. 清理命令。
+2. 清理模板。
+3. 简化任务创建。
+4. 简化 worktree 清理。
+5. 修复 Windows 路径问题。
+
+验收：
+
+- 你连续 5 天愿意使用。
+
+### 26.12 第 12 周：复盘和下一步决策
+
+目标：决定是否继续。
+
+复盘问题：
+
+- 是否减少复制粘贴？
+- 是否减少工作区混乱？
+- 是否提高 patch 回收效率？
+- 是否让任务更清晰？
+- 是否值得继续做 MCP？
+- 是否值得开源？
+
+验收：
+
+- 如果自己不愿意持续用，停止扩展。
+- 如果自己愿意用，进入下一阶段。
+
+---
+
+## 27. 模块验收标准
+
+### 27.1 Project Blueprint
+
+合格标准：
+
+- 能让新 Agent 理解项目方向。
+- 不超过过长篇幅。
+- 包含不做事项。
+- 每周最多更新一次。
+
+失败表现：
+
+- 变成流水账。
+- 内容太长，Agent 不读。
+- 和实际项目脱节。
+
+### 27.2 Task Card
+
+合格标准：
+
+- 目标明确。
+- 修改范围明确。
+- 验收标准明确。
+- 能直接生成 Context Pack。
+
+失败表现：
+
+- 任务太大。
+- 验收模糊。
+- 没有 allowed_files。
+
+### 27.3 Context Pack
+
+合格标准：
+
+- Agent 读完能开始工作。
+- 不需要你再补大量背景。
+- 只包含相关内容。
+- active Lesson 明确。
+
+失败表现：
+
+- 过长。
+- 缺关键文件。
+- 塞入过期信息。
+
+### 27.4 Sandbox
+
+合格标准：
+
+- Agent 在隔离目录工作。
+- 主目录保持干净。
+- patch 可回收。
+
+失败表现：
+
+- worktree 清理困难。
+- 路径混乱。
+- patch 不知道来自哪里。
+
+### 27.5 Guard
+
+合格标准：
+
+- 能发现越界修改。
+- 报告清楚。
+- 误报可接受。
+
+失败表现：
+
+- 报告太吵。
+- 一堆无意义警告。
+- 真问题没发现。
+
+### 27.6 Supervisor
+
+合格标准：
+
+- 建议基于状态。
+- 能减少你传话。
+- 能总结 patch。
+- 能提出下一步。
+
+失败表现：
+
+- 空话多。
+- 不引用证据。
+- 建议不落地。
+
+---
+
+## 28. 失败模式与预防
+
+### 28.1 做成另一个聊天窗口
+
+风险：
+
+Supervisor 变成一个普通聊天 AI，所有状态仍然在对话里。
+
+预防：
+
+- 所有状态写文件和事件。
+- Supervisor 每次读取状态。
+- 不依赖对话历史。
+
+### 28.2 做成过重平台
+
+风险：
+
+一开始做 Web、数据库、权限、团队协作。
+
+预防：
+
+- 本地优先。
+- CLI 优先。
+- 只服务自己。
+
+### 28.3 协议太早抽象
+
+风险：
+
+写了很多 schema，但没有真实使用。
+
+预防：
+
+- 每个协议对象必须来自真实流程。
+- 没用过三次，不固化。
+
+### 28.4 Supervisor 权限过大
+
+风险：
+
+AI 自己派发、自己验收、自己合并。
+
+预防：
+
+- 高风险必须人确认。
+- 自动合并晚做。
+- 所有决策有事件。
+
+### 28.5 记忆污染
+
+风险：
+
+错误 Lesson 被反复注入。
+
+预防：
+
+- pending review。
+- TTL。
+- evidence。
+- active 需要确认。
+
+### 28.6 Agent 接入不稳定
+
+风险：
+
+不同产品 API/MCP 支持不一致。
+
+预防：
+
+- 派发分级。
+- 先支持手动任务包。
+- 能自动再自动。
+
+---
+
+## 29. 开源与社区路线
+
+### 29.1 什么时候开源
+
+不要太早。
+
+满足以下条件再开源：
+
+- 你自己连续使用 4 周。
+- 完成 10 个真实任务。
+- 有清晰 README。
+- 能演示一个完整流程。
+
+### 29.2 开源定位
+
+不要叫企业平台。
+
+可以叫：
+
+- Local Agent Workspace。
+- AI Coding Agent Control Plane。
+- Agent Workbench。
+
+中文：
+
+- AI Agent 本地工作区。
+- 多 Agent 编码工作台。
+
+### 29.3 开源最小文档
+
+需要：
+
+- 为什么做。
+- 解决什么问题。
+- 5 分钟 quickstart。
+- 一次完整任务示例。
+- 与 Claude Code / Codex / Cursor 的关系。
+- 不做什么。
+
+### 29.4 社区风险
+
+开源后可能出现：
+
+- 用户要求支持各种工具。
+- 用户要求 Web UI。
+- 用户要求企业功能。
+- 用户提交复杂 PR。
+
+策略：
+
+- 明确个人开发者优先。
+- 不接受偏离核心工作流的需求。
+- 先保证自己使用。
+
+---
+
+## 30. 商业化可能性
+
+### 30.1 短期不商业化
+
+现在最重要的是验证问题。
+
+不要急着：
+
+- 定价。
+- SaaS。
+- 企业客户。
+- 团队版。
+
+### 30.2 可能的中期产品
+
+如果个人版有人用，可以考虑：
+
+- Pro UI。
+- GitHub App。
+- 多项目同步。
+- 团队共享记忆。
+- 云端 Supervisor。
+- 高级 MCP 网关。
+
+### 30.3 企业版条件
+
+只有满足以下条件再考虑：
+
+- 有团队主动询问。
+- 有人愿意付费。
+- 个人版工作流稳定。
+- 任务、记忆、artifact 协议稳定。
+
+否则企业版只是想象。
+
+---
+
+## 31. 与现有产品的关系
+
+### 31.1 与 Codex
+
+Codex 是执行 Agent。
+
+AECI 不替代它，而是给它任务、上下文和沙箱。
+
+### 31.2 与 Claude Code
+
+Claude Code 可以是强执行者，也可以承载 Supervisor。
+
+但记忆和状态不应该放在 Claude Code 会话里。
+
+### 31.3 与 Cursor
+
+Cursor 是 IDE 和执行环境。
+
+AECI 可以生成任务包和 Context Pack，让 Cursor Agent 使用。
+
+### 31.4 与 GitHub Copilot
+
+Copilot 更偏 IDE 内辅助。
+
+若无法深度接入，先通过规则文件和任务包间接接入。
+
+### 31.5 与 AutoGen / CrewAI / LangGraph
+
+这些是 Agent 编排框架。
+
+AECI 更偏工作区和协议层。
+
+以后可以把它们作为执行编排引擎，但不是第一阶段核心。
+
+---
+
+## 32. 长期理论：从工作区到协议层
+
+### 32.1 工作区验证协议
+
+协议不能凭空设计。
+
+只有当某个对象在工作区里反复出现，才值得协议化。
+
+例如：
+
+- 任务卡每天用。
+- Context Pack 每个任务用。
+- Artifact 每次验收用。
+
+这些就值得协议化。
+
+### 32.2 协议层不只是 LLM
+
+未来接入对象可以是：
+
+- LLM。
+- 图像生成。
+- 视频生成。
+- 搜索。
+- 浏览器。
+- Office。
+- 数据分析。
+- 自动化脚本。
+
+任务和产物协议如果设计得好，就不局限于代码。
+
+### 32.3 协议层的核心价值
+
+协议层解决：
+
+- 不同工具之间的任务传递。
+- 不同工具之间的上下文传递。
+- 不同工具之间的产物验收。
+- 不同工具之间的记忆沉淀。
+
+这比“某一个 Agent 更聪明”更长期。
+
+---
+
+## 33. 最终蓝图摘要
+
+最终系统可以概括为：
+
+```text
+Agent 工作区
+  管理项目蓝图、任务、文档、记忆和产物
+
+Supervisor Console
+  观察状态、建议计划、派发任务、验收结果、更新复盘
+
+确定性核心
+  维护事件、权限、沙箱、上下文、artifact 和 review
+
+Agent Connectors
+  接入 Codex、Claude Code、Cursor、MCP Agent、本地工具
+
+协议化对象
+  Task Card、Context Pack、Agent Profile、Permission、Artifact、Review、Memory
+
+未来扩展
+  多 Agent 半自动工作流、协议层、团队版、AI 公司运行时
+```
+
+---
+
+## 34. 典型使用场景
+
+### 34.1 场景一：新任务从零派发
+
+你想修复一个 bug。
+
+传统方式：
+
+1. 打开 Claude Code。
+2. 解释项目。
+3. 解释 bug。
+4. 解释不要改哪些文件。
+5. 等它做。
+6. 发现它改多了。
+7. 手动 review。
+
+AECI 工作区方式：
+
+1. 创建 Task Card。
+2. Supervisor 生成 Context Pack。
+3. Supervisor 建议派给 backend-worker。
+4. 你确认。
+5. 系统创建 sandbox。
+6. Agent 执行。
+7. Agent 提交 patch。
+8. Guard 检查。
+9. Supervisor 验收。
+10. 你决定合并。
+
+差异：
+
+- 你不再重复解释项目。
+- 任务边界提前写清。
+- 产物可回收。
+- 失败能复盘。
+
+### 34.2 场景二：长任务中断后恢复
+
+问题：
+
+Agent 工作一半，因为上下文太长、窗口关闭或隔了几天，状态丢失。
+
+AECI 方式：
+
+- Trace 保存发生过什么。
+- Episode 保存阶段结果。
+- Task Card 保存目标。
+- Sandbox 保存未完成 patch。
+- Supervisor 重新读取状态。
+- 新 Agent 接入后获取 Context Pack。
+
+恢复方式：
+
+```text
+读取任务状态
+读取上次 Episode
+读取当前 sandbox diff
+读取未完成事项
+生成恢复用 Context Pack
+派给新的 Agent
+```
+
+这样 Agent 不需要“记得自己是谁”，它读取状态后进入工作。
+
+### 34.3 场景三：多个 Agent 并行
+
+比如：
+
+- Codex 做后端实现。
+- Claude Code 做测试。
+- Cursor 做前端调整。
+
+AECI 需要做：
+
+- 三个 Task Card。
+- 三个 sandbox。
+- 不同 allowed_files。
+- 不同 Context Pack。
+- 统一 Artifact 收口。
+- Supervisor 比较结果。
+
+风险：
+
+- 接口变动不一致。
+- 测试和实现不匹配。
+- 多个 patch 改同一文件。
+
+解决：
+
+- 公共接口先由 Supervisor 或你确认。
+- 每个任务只改自己的范围。
+- 合并顺序由系统提示。
+- 冲突时不自动合并。
+
+### 34.4 场景四：Agent 提交了危险 patch
+
+比如 Agent：
+
+- 改了配置。
+- 删除了测试。
+- 新增大依赖。
+- 修改了 forbidden files。
+
+AECI 处理：
+
+- Artifact 收回。
+- Guard 标红。
+- Supervisor 解释风险。
+- 任务进入 changes_requested 或 rejected。
+- 生成 Episode。
+- 如果值得记，提出 Lesson：
+
+```text
+scope: whole_repo
+rule: 未经确认不要修改 CI 配置
+reason: task-032 曾导致测试环境失效
+severity: must
+```
+
+### 34.5 场景五：非代码任务
+
+未来你可能让 Agent 做：
+
+- 产品说明。
+- 架构图。
+- 宣传图。
+- 视频脚本。
+- PPT。
+- 表格。
+
+同样适用：
+
+- Task Card 描述目标。
+- Context Pack 提供背景。
+- Agent Profile 定义角色。
+- Artifact Submit 提交产物。
+- Review Result 验收。
+- Episode 记录结果。
+
+这说明协议对象不应只服务代码。
+
+---
+
+## 35. 不同 Agent 接入策略
+
+### 35.1 Codex 类 CLI Agent
+
+特点：
+
+- 适合命令行工作流。
+- 可能能读写文件、运行测试。
+- 可以在 sandbox 中工作。
+
+接入策略：
+
+- 给它工作目录。
+- 给它 Context Pack。
+- 要求它提交 patch 或保留 diff。
+- 通过事件记录收回结果。
+
+优势：
+
+- 自动化程度高。
+- 与 Git worktree 配合好。
+
+风险：
+
+- 命令执行权限要限制。
+- 可能直接改超范围文件。
+
+### 35.2 Claude Code
+
+特点：
+
+- 强上下文理解。
+- 适合作为 Supervisor 或强执行 Agent。
+- 支持 MCP 生态。
+
+接入策略：
+
+- Supervisor 可以由 Claude Code 承载。
+- 执行任务时通过 MCP 读取 Task / Context。
+- 仍然要求 sandbox。
+
+风险：
+
+- 不要把状态保存在 Claude 会话。
+- 不要让 Claude 直接成为唯一项目记忆。
+
+### 35.3 Cursor
+
+特点：
+
+- IDE 集成强。
+- 适合代码编辑。
+- 用户体验好。
+
+接入策略：
+
+- 通过 Context Pack / rules 文件间接接入。
+- 如果 MCP 支持足够，直接接 MCP。
+- 适合处理前端、局部实现和交互式修改。
+
+风险：
+
+- 某些模式可能不完全受外部协议控制。
+- 需要事后 patch 检查。
+
+### 35.4 本地模型
+
+特点：
+
+- 成本低。
+- 数据本地。
+- 能力可能弱。
+
+适合：
+
+- 文档摘要。
+- 日志压缩。
+- Episode 生成。
+- Lesson 草稿。
+- 简单分类。
+
+不适合：
+
+- 高风险代码修改。
+- 复杂架构判断。
+
+### 35.5 生图 / 视频 / 办公工具
+
+未来接入时，它们不是“开发者”，而是产物生成器。
+
+适合任务：
+
+- 生成产品图。
+- 制作演示素材。
+- 生成视频脚本。
+- 整理表格。
+- 生成报告。
+
+同样需要：
+
+- 输入上下文。
+- 权限。
+- 产物提交。
+- 验收。
+
+---
+
+## 36. 决策树：什么时候做什么
+
+### 36.1 是否需要 Supervisor
+
+如果任务少、只用一个 Agent：
+
+- 不需要 Supervisor。
+- 用 Task Card + Context Pack 即可。
+
+如果任务多、需要拆分：
+
+- 需要 Supervisor 建议计划。
+
+如果多个 Agent 并行：
+
+- 需要 Supervisor 监控状态。
+
+### 36.2 是否需要 MCP
+
+如果你还在手工验证流程：
+
+- 不需要 MCP。
+
+如果 Context Pack 稳定有用：
+
+- 可以做 MCP。
+
+如果你频繁切换 Claude Code / Cursor / Codex：
+
+- MCP 价值上升。
+
+### 36.3 是否需要自动派发
+
+如果任务需要你深度判断：
+
+- 不自动派发。
+
+如果任务低风险且格式稳定：
+
+- 可自动派发。
+
+如果 Agent 接口不稳定：
+
+- 只生成任务包。
+
+### 36.4 是否需要自动合并
+
+早期：
+
+- 不需要。
+
+低风险任务稳定后：
+
+- 可候选自动合并。
+
+高风险任务：
+
+- 永远人工确认。
+
+### 36.5 是否需要团队版
+
+如果只有你自己用：
+
+- 不需要。
+
+如果朋友也在用：
+
+- 先支持导入导出。
+
+如果多人共享一个仓库：
+
+- 再考虑团队版。
+
+---
+
+## 37. 路线分叉与选择
+
+### 37.1 分叉 A：工具路线
+
+专注个人工具。
+
+优点：
+
+- 可控。
+- 快速。
+- 自己受益。
+
+缺点：
+
+- 商业上限有限。
+
+适合当前阶段。
+
+### 37.2 分叉 B：协议路线
+
+专注协议对象。
+
+优点：
+
+- 长期价值高。
+- 不怕执行 Agent 变强。
+
+缺点：
+
+- 太早做没人用。
+- 容易抽象过度。
+
+适合工作流稳定后。
+
+### 37.3 分叉 C：平台路线
+
+做完整 Web/云平台。
+
+优点：
+
+- 可商业化。
+- 可团队协作。
+
+缺点：
+
+- 个人开发者负担重。
+- 需要维护、安全、用户支持。
+
+不适合当前阶段。
+
+### 37.4 分叉 D：自动化路线
+
+做全自动多 Agent。
+
+优点：
+
+- 吸引力强。
+- 演示效果好。
+
+缺点：
+
+- 容易失控。
+- 需要大量验证。
+
+只适合长期。
+
+### 37.5 推荐选择
+
+当前：
+
+```text
+工具路线为主
+协议路线为辅
+平台路线暂缓
+自动化路线作为远期研究
+```
+
+---
+
+## 38. 项目止损条件
+
+### 38.1 自己不用
+
+如果连续两周你在使用多个 Agent，但没有打开工作区系统，说明工具没有进入真实工作流。
+
+处理：
+
+- 停止加功能。
+- 找出最烦的一步。
+- 如果无法改善，暂停项目。
+
+### 38.2 工作流比手工更麻烦
+
+如果每个任务都要填大量字段，反而不如手工 prompt。
+
+处理：
+
+- 简化 Task Card。
+- 降低必填字段。
+- 允许从一句话任务开始。
+
+### 38.3 Supervisor 空话太多
+
+如果 Supervisor 输出很长但不提供可执行建议。
+
+处理：
+
+- 固定输出模板。
+- 要求引用证据。
+- 限制输出长度。
+
+### 38.4 记忆污染
+
+如果 Lesson 越来越多但没用。
+
+处理：
+
+- 强制 TTL。
+- 只注入 top 5。
+- pending 需要确认。
+
+### 38.5 接入成本过高
+
+如果为了接某个 Agent 花太多时间。
+
+处理：
+
+- 降级为任务包复制。
+- 不强求自动接入。
+
+---
+
+## 39. 长期护城河
+
+即使只是个人项目，也可以思考长期护城河。
+
+### 39.1 真实工作流
+
+最大护城河不是代码，而是你对真实多 Agent 工作流的理解。
+
+### 39.2 记忆结构
+
+Trace / Episode / Lesson 如果做得好，会比普通聊天记录强很多。
+
+### 39.3 协议对象
+
+Task Card、Context Pack、Artifact、Review 这些对象如果稳定，会成为长期资产。
+
+### 39.4 使用数据
+
+你自己的任务记录会告诉你：
+
+- Agent 哪里容易失败。
+- 哪些约束最重要。
+- 哪些上下文最有效。
+
+这些是未来 Router 和自动化的基础。
+
+---
+
+## 40. 最终落地建议
+
+如果要把这份蓝图压缩成最短执行建议：
+
+第一步：
+
+手工跑一次完整流程。
+
+第二步：
+
+做本地任务卡和 Context Pack。
+
+第三步：
+
+做 worktree 沙箱和 patch 回收。
+
+第四步：
+
+做 Supervisor 只读状态和建议。
+
+第五步：
+
+做验收和 Episode。
+
+第六步：
+
+做 MCP。
+
+第七步：
+
+做协议化。
+
+不要反过来。
+
+最重要的是：
+
+> 这个项目第一阶段不是让 AI 自动开发，而是让你不再被多个 AI 的混乱工作流拖累。
+
+---
+
+## 41. 参考说明
+
+本蓝图参考了当前公开的 Agent 工具和协议生态：
+
+- MCP：适合作为 Agent 调用工具、读取上下文、提交产物的协议入口。
+- A2A：说明 Agent 互操作正在成为明确方向，可作为未来协议层参考。
+- Codex / Claude Code / Cursor 等产品：说明执行层会持续进化，本项目应做协调层而非执行层。
+
+这些外部生态会变化，所以本项目不应绑定某一家工具。核心应放在任务、记忆、权限、沙箱、验收和协议对象上。

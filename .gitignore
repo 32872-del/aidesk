@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Local runtime state
+.aeci/state.db
+.aeci/sandboxes/*
+!.aeci/sandboxes/.gitkeep
+.aeci/artifacts/**/*.patch
+.aeci/artifacts/**/*.diff
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs
+*.log

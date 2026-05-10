@@ -1,0 +1,24 @@
+[workspace]
+name = "agent-workspace"
+phase = "manual-workflow"
+default_branch = "main"
+sandbox_dir = ".aeci/sandboxes"
+events_file = ".aeci/events.jsonl"
+
+[context]
+max_lessons = 5
+include_full_files = false
+default_budget = "small"
+
+[agents]
+default_supervisor = "supervisor"
+default_worker = "doc-maintainer"
+
+[guards]
+require_allowed_files = true
+block_forbidden_files = true
+block_dependency_changes_by_default = true
+block_config_changes_by_default = false
+
+[mcp]
+enabled = false
