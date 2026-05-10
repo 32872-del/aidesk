@@ -1,0 +1,13 @@
+[project]
+name = "agent-workspace"
+version = "0.1.0"
+description = "Local-first Agent Workspace experiment for personal multi-AI development."
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.aeci]
+workspace = ".aeci"
+phase = "manual-workflow"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

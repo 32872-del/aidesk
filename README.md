@@ -42,3 +42,27 @@ A personal workspace for multi-AI development. It does not write code for you; i
 ```
 
 根目录里的 `Agent工作区_个人开发者蓝图.md` 是完整蓝图原文，`.aeci/blueprint.md` 是给日常 Agent 工作使用的短版稳定蓝图。
+
+## CLI
+
+当前只有一个最小标准库 CLI：
+
+```powershell
+python aeci.py status
+python aeci.py task new "Write next task" --objective "Capture the next bounded task."
+python aeci.py context task-002
+```
+
+测试命令：
+
+```powershell
+python -m unittest discover -s tests
+```
+
+## 下一步
+
+短期路线写在 `.aeci/roadmap.md`。当前建议先做：
+
+1. `task-002`：最小 CLI。
+2. `task-003`：基础 guard 检查。
+3. `task-004`：手工 worktree 沙箱流程。

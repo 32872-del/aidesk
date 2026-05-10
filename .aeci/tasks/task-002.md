@@ -21,8 +21,14 @@ medium
 - `aeci.py`
 - `pyproject.toml`
 - `tests/**`
+- `.aeci/roadmap.md`
+- `.aeci/tasks/**`
+- `.aeci/contexts/**`
+- `.aeci/reviews/**`
+- `.aeci/episodes/**`
 - `.aeci/templates/**`
 - `.aeci/events.jsonl`
+- `README.md`
 
 ## Forbidden Files
 
