@@ -1,4 +1,6 @@
-# Agent Workspace
+# aidesk
+
+A personal workspace for multi-AI development. It does not write code for you; it keeps your agents from stepping on each other's toes by sharing tasks, memory, and guardrails across sessions.
 
 个人开发者多 AI 协作工作区实验。
 
